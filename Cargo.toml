@@ -17,6 +17,7 @@ members = ["crates/*", "examples/ios", "tools/ci"]
 
 [features]
 default = [
+  "bevy_animation_rig",
   "bevy_audio",
   "bevy_gilrs",
   "bevy_gltf",
@@ -42,6 +43,7 @@ render = [
 ]
 
 # Optional bevy crates
+bevy_animation_rig = ["bevy_internal/bevy_animation_rig"]
 bevy_audio = ["bevy_internal/bevy_audio"]
 bevy_dynamic_plugin = ["bevy_internal/bevy_dynamic_plugin"]
 bevy_gilrs = ["bevy_internal/bevy_gilrs"]
@@ -180,6 +182,15 @@ path = "examples/3d/wireframe.rs"
 [[example]]
 name = "z_sort_debug"
 path = "examples/3d/z_sort_debug.rs"
+
+# Animation
+[[example]]
+name = "custom_skinned_mesh"
+path = "examples/animation/custom_skinned_mesh.rs"
+
+[[example]]
+name = "gltf_skinned_mesh"
+path = "examples/animation/gltf_skinned_mesh.rs"
 
 # Application
 [[example]]
