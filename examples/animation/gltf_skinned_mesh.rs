@@ -5,7 +5,7 @@ use bevy::{pbr::AmbientLight, prelude::*};
 /// Skinned mesh example with mesh and joints data loaded from a glTF file.
 /// Example taken from https://github.com/KhronosGroup/glTF-Tutorials/blob/master/gltfTutorial/gltfTutorial_019_SimpleSkin.md
 fn main() {
-    App::build()
+    App::new()
         .add_plugins(DefaultPlugins)
         .insert_resource(AmbientLight {
             brightness: 1.0,

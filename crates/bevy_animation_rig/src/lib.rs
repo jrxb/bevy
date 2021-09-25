@@ -1,4 +1,4 @@
-use bevy_app::{AppBuilder, CoreStage, Plugin, StartupStage};
+use bevy_app::{App, CoreStage, Plugin, StartupStage};
 use bevy_asset::AddAsset;
 use bevy_ecs::{
     schedule::{ParallelSystemDescriptorCoercion, SystemLabel},
@@ -19,7 +19,7 @@ pub enum AnimationRigSystem {
 pub struct AnimationRigPlugin;
 
 impl Plugin for AnimationRigPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.register_type::<SkinnedMesh>()
             .add_asset::<SkinnedMeshInverseBindposes>()
             .add_startup_system_to_stage(

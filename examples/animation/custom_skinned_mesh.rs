@@ -12,7 +12,7 @@ use bevy::{
 /// Skinned mesh example with mesh and joints data defined in code.
 /// Example taken from https://github.com/KhronosGroup/glTF-Tutorials/blob/master/gltfTutorial/gltfTutorial_019_SimpleSkin.md
 fn main() {
-    App::build()
+    App::new()
         .add_plugins(DefaultPlugins)
         .insert_resource(AmbientLight {
             brightness: 1.0,
@@ -24,6 +24,7 @@ fn main() {
 }
 
 /// Used to mark a joint to be animated in the [`joint_animation`] system.
+#[derive(Component)]
 struct AnimatedJoint;
 
 /// Construct a mesh and a skeleton with 2 joints for that mesh,
