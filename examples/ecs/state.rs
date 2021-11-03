@@ -78,18 +78,15 @@ fn menu(
     >,
 ) {
     for (interaction, mut material) in interaction_query.iter_mut() {
-        match *interaction {
+        let new_material = match *interaction {
             Interaction::Clicked => {
-                *material = button_materials.pressed.clone();
                 state.set(AppState::InGame).unwrap();
+                button_materials.pressed.clone()
             }
-            Interaction::Hovered => {
-                *material = button_materials.hovered.clone();
-            }
-            Interaction::None => {
-                *material = button_materials.normal.clone();
-            }
-        }
+            Interaction::Hovered => button_materials.hovered.clone(),
+            Interaction::None => button_materials.normal.clone(),
+        };
+        *material = new_material;
     }
 }
 
@@ -118,19 +115,10 @@ fn movement(
 ) {
     for mut transform in query.iter_mut() {
         let mut direction = Vec3::ZERO;
-        if input.pressed(KeyCode::Left) {
-            direction.x -= 1.0;
-        }
-        if input.pressed(KeyCode::Right) {
-            direction.x += 1.0;
-        }
-        if input.pressed(KeyCode::Up) {
-            direction.y += 1.0;
-        }
-        if input.pressed(KeyCode::Down) {
-            direction.y -= 1.0;
-        }
-
+        if input.pressed(KeyCode::Left) { direction.x -= 1.0; }
+        if input.pressed(KeyCode::Right) { direction.x += 1.0; }
+        if input.pressed(KeyCode::Up) { direction.y += 1.0; }
+        if input.pressed(KeyCode::Down) { direction.y -= 1.0; }
         if direction != Vec3::ZERO {
             transform.translation += direction.normalize() * SPEED * time.delta_seconds();
         }

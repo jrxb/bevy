@@ -1,5 +1,107 @@
 use bevy::prelude::*;
 
+macro_rules! flex {
+    (@layout {$(!color: $color:expr,)? $($field:ident : $content:expr),*} [$mat:expr]) => ({
+        let default_style = Style {
+            size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+            ..Default::default()
+        };
+        let default_node = NodeBundle {
+            style: Style { $($field : $content,)* .. default_style },
+            material: $mat.add(Color::NONE.into()),
+            ..Default::default()
+        };
+        NodeBundle { $(material: $mat.add($color.into()),)? .. default_node }
+    });
+    (@control text
+        [$cmds:expr, $mat:expr, $font:expr]
+        $text:expr
+    ) => ({
+        let text_style = TextStyle {
+            color: Color::WHITE,
+            font: $font.clone(),
+            font_size: 20.0,
+        };
+        let text_align = TextAlignment { horizontal: HorizontalAlign::Left, ..Default::default() };
+        $cmds.spawn_bundle(TextBundle {
+            style: Style::default(),
+            text: Text::with_section($text, text_style, text_align),
+            ..Default::default()
+        })
+    });
+    (@control image
+        [$cmds:expr, $mat:expr, $font:expr]
+        $image:expr
+    ) => (
+        $cmds.spawn_bundle(ImageBundle {
+            style: Style {
+                size: Size::new(Val::Px(500.0), Val::Auto),
+                ..Default::default()
+            },
+            material: $mat.add($image),
+            ..Default::default()
+        })
+    );
+    (@control layout
+        {$($params:tt)*}
+        [$cmds:expr, $mat:expr, $font:expr]
+        $(
+            $control:ident
+                $({$($ctrl_params:tt)*})?
+                ( $($control_args:tt)* )
+        )*
+    ) => (
+        #[allow(unused_variables)]
+        $cmds.spawn_bundle(flex!(@layout {$($params)*} [$mat]))
+            .with_children(|parent| {
+                $(
+                    flex!(
+                        @control $control
+                            $({$($ctrl_params)*})?
+                            [parent, $mat, $font]
+                            $($control_args)*
+                    );
+                )*
+            })
+    );
+    (@control vertical [$($x:tt)*]
+        $( $control:ident $({$($params:tt)*})? ( $($control_args:tt)* ) )*
+    ) => (
+        flex!(
+            @control layout {flex_direction: FlexDirection::Column} [$($x)*]
+            $( $control $({$($params)*})? ( $($control_args)* ) )*
+        )
+    );
+    (@control horizontal [$($x:tt)*]
+        $( $control:ident $({$($params:tt)*})? ( $($control_args:tt)* ) )*
+    ) => (
+        flex!(
+            @control layout {flex_direction: FlexDirection::Row} [$($x)*]
+            $( $control $({$($params)*})? ( $($control_args)* ) )*
+        )
+    );
+}
+
+macro_rules! size {
+    (@unit px $value:literal) => (Val::Px($value));
+    (@unit pct $value:literal) => (Val::Percent($value));
+    ($x:literal $x_unit:ident, $y:literal $y_unit:ident) => (
+        Size::new(size!(@unit $x_unit $x), size!(@unit $y_unit $y))
+    );
+}
+
+macro_rules! grey {
+    ($value:literal) => (
+        Color::rgb($value, $value, $value)
+    )
+}
+
+macro_rules! col {
+    ($r:expr, $g:expr, $b:expr) => (
+        Color::rgb($r, $g, $b)
+    )
+}
+
 /// This example illustrates the various features of Bevy UI.
 fn main() {
     App::new()
@@ -13,206 +115,93 @@ fn setup(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
+    let px = |f: f32| Val::Px(f);
+    let abs_pos = |left: f32, bottom: f32| 
+        Rect { left: px(left), bottom: px(bottom), ..Default::default() };
+
+    let bevy_logo = asset_server.load("branding/bevy_logo_dark_big.png");
     // ui camera
     commands.spawn_bundle(UiCameraBundle::default());
+
+    let font = asset_server.load("fonts/FiraSans-Bold.ttf");
     // root node
-    commands
-        .spawn_bundle(NodeBundle {
-            style: Style {
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                justify_content: JustifyContent::SpaceBetween,
-                ..Default::default()
-            },
-            material: materials.add(Color::NONE.into()),
-            ..Default::default()
-        })
-        .with_children(|parent| {
-            // left vertical fill (border)
-            parent
-                .spawn_bundle(NodeBundle {
-                    style: Style {
-                        size: Size::new(Val::Px(200.0), Val::Percent(100.0)),
-                        border: Rect::all(Val::Px(2.0)),
-                        ..Default::default()
-                    },
-                    material: materials.add(Color::rgb(0.65, 0.65, 0.65).into()),
-                    ..Default::default()
-                })
-                .with_children(|parent| {
-                    // left vertical fill (content)
-                    parent
-                        .spawn_bundle(NodeBundle {
-                            style: Style {
-                                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                                align_items: AlignItems::FlexEnd,
-                                ..Default::default()
-                            },
-                            material: materials.add(Color::rgb(0.15, 0.15, 0.15).into()),
-                            ..Default::default()
-                        })
-                        .with_children(|parent| {
-                            // text
-                            parent.spawn_bundle(TextBundle {
-                                style: Style {
-                                    margin: Rect::all(Val::Px(5.0)),
-                                    ..Default::default()
-                                },
-                                text: Text::with_section(
-                                    "Text Example",
-                                    TextStyle {
-                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                        font_size: 30.0,
-                                        color: Color::WHITE,
-                                    },
-                                    Default::default(),
-                                ),
-                                ..Default::default()
-                            });
-                        });
-                });
-            // right vertical fill
-            parent.spawn_bundle(NodeBundle {
-                style: Style {
-                    size: Size::new(Val::Px(200.0), Val::Percent(100.0)),
-                    ..Default::default()
-                },
-                material: materials.add(Color::rgb(0.15, 0.15, 0.15).into()),
-                ..Default::default()
-            });
-            // absolute positioning
-            parent
-                .spawn_bundle(NodeBundle {
-                    style: Style {
-                        size: Size::new(Val::Px(200.0), Val::Px(200.0)),
-                        position_type: PositionType::Absolute,
-                        position: Rect {
-                            left: Val::Px(210.0),
-                            bottom: Val::Px(10.0),
-                            ..Default::default()
-                        },
-                        border: Rect::all(Val::Px(20.0)),
-                        ..Default::default()
-                    },
-                    material: materials.add(Color::rgb(0.4, 0.4, 1.0).into()),
-                    ..Default::default()
-                })
-                .with_children(|parent| {
-                    parent.spawn_bundle(NodeBundle {
-                        style: Style {
-                            size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                            ..Default::default()
-                        },
-                        material: materials.add(Color::rgb(0.8, 0.8, 1.0).into()),
-                        ..Default::default()
-                    });
-                });
-            // render order test: reddest in the back, whitest in the front (flex center)
-            parent
-                .spawn_bundle(NodeBundle {
-                    style: Style {
-                        size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                        position_type: PositionType::Absolute,
-                        align_items: AlignItems::Center,
-                        justify_content: JustifyContent::Center,
-                        ..Default::default()
-                    },
-                    material: materials.add(Color::NONE.into()),
-                    ..Default::default()
-                })
-                .with_children(|parent| {
-                    parent
-                        .spawn_bundle(NodeBundle {
-                            style: Style {
-                                size: Size::new(Val::Px(100.0), Val::Px(100.0)),
-                                ..Default::default()
-                            },
-                            material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
-                            ..Default::default()
-                        })
-                        .with_children(|parent| {
-                            parent.spawn_bundle(NodeBundle {
-                                style: Style {
-                                    size: Size::new(Val::Px(100.0), Val::Px(100.0)),
-                                    position_type: PositionType::Absolute,
-                                    position: Rect {
-                                        left: Val::Px(20.0),
-                                        bottom: Val::Px(20.0),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                material: materials.add(Color::rgb(1.0, 0.3, 0.3).into()),
-                                ..Default::default()
-                            });
-                            parent.spawn_bundle(NodeBundle {
-                                style: Style {
-                                    size: Size::new(Val::Px(100.0), Val::Px(100.0)),
-                                    position_type: PositionType::Absolute,
-                                    position: Rect {
-                                        left: Val::Px(40.0),
-                                        bottom: Val::Px(40.0),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                material: materials.add(Color::rgb(1.0, 0.5, 0.5).into()),
-                                ..Default::default()
-                            });
-                            parent.spawn_bundle(NodeBundle {
-                                style: Style {
-                                    size: Size::new(Val::Px(100.0), Val::Px(100.0)),
-                                    position_type: PositionType::Absolute,
-                                    position: Rect {
-                                        left: Val::Px(60.0),
-                                        bottom: Val::Px(60.0),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                material: materials.add(Color::rgb(1.0, 0.7, 0.7).into()),
-                                ..Default::default()
-                            });
-                            // alpha test
-                            parent.spawn_bundle(NodeBundle {
-                                style: Style {
-                                    size: Size::new(Val::Px(100.0), Val::Px(100.0)),
-                                    position_type: PositionType::Absolute,
-                                    position: Rect {
-                                        left: Val::Px(80.0),
-                                        bottom: Val::Px(80.0),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                material: materials.add(Color::rgba(1.0, 0.9, 0.9, 0.4).into()),
-                                ..Default::default()
-                            });
-                        });
-                });
-            // bevy logo (flex center)
-            parent
-                .spawn_bundle(NodeBundle {
-                    style: Style {
-                        size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                        position_type: PositionType::Absolute,
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::FlexEnd,
-                        ..Default::default()
-                    },
-                    material: materials.add(Color::NONE.into()),
-                    ..Default::default()
-                })
-                .with_children(|parent| {
-                    // bevy logo (image)
-                    parent.spawn_bundle(ImageBundle {
-                        style: Style {
-                            size: Size::new(Val::Px(500.0), Val::Auto),
-                            ..Default::default()
-                        },
-                        material: materials
-                            .add(asset_server.load("branding/bevy_logo_dark_big.png").into()),
-                        ..Default::default()
-                    });
-                });
-        });
+    flex! {
+        @control layout {justify_content: JustifyContent::SpaceBetween}
+        [commands, materials, font]
+
+        // left vertical fill (border)
+        layout { !color: grey!(0.65), size: size!(200.0 px, 100.0 pct), border: Rect::all(px(2.0)) } (
+            // left vertical fill (content)
+            layout { !color: grey!(0.15), align_items: AlignItems::FlexEnd } (
+                text("Text Example")
+            )
+        )
+        // right vertical fill
+        layout {!color: grey!(0.15), size: size!(200.0 px, 100.0 pct)} ()
+        // absoulte positioning
+        layout {
+            !color: col!(0.4, 0.4, 1.0),
+            size: size!(200.0 px, 200.0 px),
+            position_type: PositionType::Absolute,
+            position: abs_pos(210.0, 10.0),
+            border: Rect::all(px(20.0))
+        } (
+            layout {!color: col!(0.8, 0.8, 1.0), } ()
+        )
+        // render order test: reddest in the back, whitest in the front (flex center)
+        layout {
+            position_type: PositionType::Absolute,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center
+        } (
+            layout {!color: Color::RED, size: size!(100.0 px, 100.0 px)} (
+                layout {
+                    !color: col!(1.0, 0.3, 0.3),
+                    size: size!(100.0 px, 100.0 px),
+                    position_type: PositionType::Absolute,
+                    position: abs_pos(20.0, 20.0)
+                } ()
+                layout {
+                    !color: col!(1.0, 0.5, 0.5),
+                    size: size!(100.0 px, 100.0 px),
+                    position_type: PositionType::Absolute,
+                    position: abs_pos(40.0, 40.0)
+                } ()
+                layout {
+                    !color: col!(1.0, 0.7, 0.7),
+                    size: size!(100.0 px, 100.0 px),
+                    position_type: PositionType::Absolute,
+                    position: abs_pos(60.0, 60.0)
+                } ()
+                // alpha test
+                layout {
+                    !color: Color::rgba(1.0, 0.9, 0.9, 0.4),
+                    size: size!(100.0 px, 100.0 px),
+                    position_type: PositionType::Absolute,
+                    position: abs_pos(80.0, 80.0)
+                } ()
+            )
+        )
+        // bevy logo (flex center)
+        layout {
+            position_type: PositionType::Absolute,
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::FlexEnd
+        } (
+            image(bevy_logo.into())
+        )
+        // flex layout
+        layout {
+            flex_direction: FlexDirection::Column,
+            justify_content: JustifyContent::SpaceEvenly, 
+            position_type: PositionType::Absolute,
+            position: abs_pos(30.0, 20.0),
+            size: size!(300.0 px, 80.0 pct)
+        } (
+            text("Text Example")
+            text("Text Example")
+            text("Text test")
+            text("Text attempt")
+        )
+    };
 }
