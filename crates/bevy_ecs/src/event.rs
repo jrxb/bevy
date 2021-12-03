@@ -268,6 +268,21 @@ impl<'w, 's, T: Resource> EventReader<'w, 's, T> {
             (event, id)
         })
     }
+
+    /// Read the events since last time the counter was advanced
+    ///
+    /// In combination with [`advance_counter`](Self::advance_counter), you can
+    /// read non-mutably the new events and advance the counter where it's
+    /// possible to mutate this.
+    pub fn non_advancing_iter(&self) -> impl DoubleEndedIterator<Item = &T> {
+        let mut last_event_count = self.last_event_count.0;
+        internal_event_reader(&mut last_event_count, &self.events).map(|(event,_id)| event)
+    }
+
+    /// Acts as if the we called [`iter`](Self::iter)
+    pub fn advance_counter(&mut self) {
+        self.last_event_count.0 = self.events.event_count;
+    }
 }
 
 impl<T: Resource> Events<T> {
